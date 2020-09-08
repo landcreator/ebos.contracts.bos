@@ -49,14 +49,11 @@ namespace eosiosystem {
          return ( flags & ~static_cast<F>(field) );
    }
 
-
    /**
     * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
-    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
-    *    delegate their vote to a proxy.
+    * - There are three types of accounts, ordinary user accounts, corporate accounts, and government accounts.
+    * - Users can stake tokens for CPU, and then corporate and government accounts could vote for producers or delegate their vote to a proxy.
     * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
-    * - Users can buy and sell RAM at a market-determined price.
-    * - Users can bid on premium names.
     */
 
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
@@ -104,12 +101,6 @@ namespace eosiosystem {
       double            total_vpay_share_change_rate = 0;
 
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
-   };
-
-   struct [[eosio::table("upgrade"), eosio::contract("eosio.system")]] upgrade_state  {
-      uint32_t     target_block_num;
-
-      EOSLIB_SERIALIZE( upgrade_state, (target_block_num) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
@@ -189,18 +180,23 @@ namespace eosiosystem {
 
       EOSLIB_SERIALIZE( eosio_guaranteed_min_res, (ram)(cpu)(net) )
    };
-   typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
 
-   typedef eosio::multi_index< "producers"_n, producer_info,
-                               indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
-                             > producers_table;
-   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
+   struct [[eosio::table("upgrade"), eosio::contract("eosio.system")]] upgrade_state  {
+      uint32_t     target_block_num;
 
+      EOSLIB_SERIALIZE( upgrade_state, (target_block_num) )
+   };
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
-   typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;
 
+   typedef eosio::multi_index< "producers"_n, producer_info,
+                               indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
+                               > producers_table;
+   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
+
+   typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
+   typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;
    typedef eosio::singleton< "upgrade"_n, upgrade_state > upgrade_singleton;
 
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -213,7 +209,7 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
-         guaranteed_min_res_singleton  _guarantee;     // *bos*
+         guaranteed_min_res_singleton  _guarantee;
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
