@@ -244,9 +244,6 @@ namespace eosiosystem {
          [[eosio::action]]
          void setalimits( name account, int64_t cpu_weight );
 
-         [[eosio::action]]
-         void setacctcpu( name account, std::optional<int64_t> cpu_weight );
-
          /// functions defined in delegate_bandwidth.cpp
          /**
           *  Stakes SYS from the balance of 'from' for the benfit of 'receiver'.
@@ -334,7 +331,6 @@ namespace eosiosystem {
          void buyrambytes( name payer, name receiver, uint32_t bytes );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
-         using setacctcpu_action = eosio::action_wrapper<"setacctcpu"_n, &system_contract::setacctcpu>;
          using delegatebw_action = eosio::action_wrapper<"delegatebw"_n, &system_contract::delegatebw>;
          using undelegatebw_action = eosio::action_wrapper<"undelegatebw"_n, &system_contract::undelegatebw>;
          using refund_action = eosio::action_wrapper<"refund"_n, &system_contract::refund>;
@@ -354,7 +350,6 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state  get_default_parameters();
-         static time_point          current_time_point();
 
          symbol core_symbol()const;
 
