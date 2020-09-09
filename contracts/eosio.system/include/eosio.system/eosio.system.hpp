@@ -301,7 +301,7 @@ namespace eosiosystem {
          void setparams( const eosio::blockchain_parameters& params );
 
          [[eosio::action]]
-         void setguaminres(uint32_t ram, uint32_t cpu, uint32_t net);
+         void setguaminres( uint32_t cpu );
 
          /// functions defined in producer_pay.cpp
          [[eosio::action]]
@@ -350,7 +350,7 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state  get_default_parameters();
-
+         static time_point current_time_point();
          symbol core_symbol()const;
 
          //defined in delegate_bandwidth.cpp

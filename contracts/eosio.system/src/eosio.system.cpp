@@ -33,6 +33,11 @@ namespace eosiosystem {
       return dp;
    }
 
+   time_point system_contract::current_time_point() {
+      const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+      return ct;
+   }
+
    symbol system_contract::core_symbol()const {
       return _gstate2.core_symbol;
    }
