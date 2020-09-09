@@ -75,7 +75,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
 
-    void set_resource_limits_x( uint64_t account_value, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
+    void set_resource_limits_cpu( uint64_t account_value, int64_t cpu_weight ) {
        set_resource_limits( account_value, -1, -1, cpu_weight );
     }
 

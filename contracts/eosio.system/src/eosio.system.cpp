@@ -115,7 +115,7 @@ namespace eosiosystem {
          check( !cpu_managed, "cannot use setalimits on an account with managed resources" );
       }
 
-      set_resource_limits_x( account.value, -1, -1, cpu );
+      set_resource_limits_cpu( account.value, cpu );
    }
 
    void system_contract::setacctcpu( name account, std::optional<int64_t> cpu_weight ) {
@@ -159,7 +159,7 @@ namespace eosiosystem {
          cpu = *cpu_weight;
       }
 
-      set_resource_limits_x( account.value, current_ram, current_net, cpu );
+      set_resource_limits_cpu( account.value, cpu );
    }
 
    void system_contract::rmvproducer( name producer ) {
@@ -227,7 +227,7 @@ namespace eosiosystem {
         res.cpu_weight = asset( 0, system_contract::get_core_symbol() );
       });
 
-      set_resource_limits_x( newact.value, 0, 0, 0 );
+      set_resource_limits_cpu( newact.value, 0 );
    }
 
    void native::setabi( name acnt, const std::vector<char>& abi ) {
@@ -254,10 +254,11 @@ namespace eosiosystem {
       require_auth( _self );
       check( version.value == 0, "unsupported version for init action" );
 
-      auto system_token_supply   = eosio::token::get_supply(token_account, core.code() );
+      auto system_token_supply = eosio::token::get_supply(token_account, core.code() );
       check( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
-
       check( system_token_supply.amount > 0, "system token supply must be greater than 0" );
+
+      _gstate2.core_symbol = core;
    }
 
    void system_contract::buyram( name payer, name receiver, asset quant ){
