@@ -246,6 +246,10 @@ namespace eosiosystem {
       }
    }
 
+   void native::setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ){
+
+   }
+
    void system_contract::init( unsigned_int version, symbol core ) {
       require_auth( _self );
       check( version.value == 0, "unsupported version for init action" );
@@ -255,14 +259,22 @@ namespace eosiosystem {
 
       check( system_token_supply.amount > 0, "system token supply must be greater than 0" );
    }
+
+   void system_contract::buyram( name payer, name receiver, asset quant ){
+
+   }
+
+   void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ){
+
+   }
 } /// eosio.system
 
 
 EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
-     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
+     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror) // (setabi)
      // eosio.system.cpp
-     (init)(setram)(setparams)(setguaminres)(setpriv)(setalimits)(setacctcpu)(rmvproducer)(updtrevision)
+     (init)(setram)(setparams)(setguaminres)(setpriv)(setalimits)(setacctcpu)(rmvproducer)(updtrevision)(buyram)(buyrambytes)
      // delegate_bandwidth.cpp
      (delegatebw)(undelegatebw)(refund)
      // voting.cpp

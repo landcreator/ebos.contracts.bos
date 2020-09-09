@@ -67,7 +67,6 @@ namespace eosiosystem {
                                      (schedule_version)(new_producers))
    };
 
-
    struct [[eosio::table("abihash"), eosio::contract("eosio.system")]] abi_hash {
       name              owner;
       capi_checksum256  hash;
@@ -134,11 +133,11 @@ namespace eosiosystem {
          [[eosio::action]]
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
 
-         [[eosio::action]]
+         // [[eosio::action]]
          void setabi( name account, const std::vector<char>& abi );
 
-         [[eosio::action]]
-         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
+         // [[eosio::action]]
+         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code );
 
          using newaccount_action = eosio::action_wrapper<"newaccount"_n, &native::newaccount>;
          using updateauth_action = eosio::action_wrapper<"updateauth"_n, &native::updateauth>;

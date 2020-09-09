@@ -327,6 +327,12 @@ namespace eosiosystem {
          [[eosio::action]]
          void setupgrade( const upgrade_proposal& up);
 
+         [[eosio::action]]
+         void buyram( name payer, name receiver, asset quant );
+
+         [[eosio::action]]
+         void buyrambytes( name payer, name receiver, uint32_t bytes );
+
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctcpu_action = eosio::action_wrapper<"setacctcpu"_n, &system_contract::setacctcpu>;
          using delegatebw_action = eosio::action_wrapper<"delegatebw"_n, &system_contract::delegatebw>;
