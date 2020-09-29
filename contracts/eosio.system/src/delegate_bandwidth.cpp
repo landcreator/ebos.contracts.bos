@@ -239,6 +239,11 @@ namespace eosiosystem {
       changebw( from, receiver, stake_cpu_quantity, transfer );
    }
 
+   void system_contract::dlgtcpu( name from, name receiver, asset stake_cpu_quantity, bool transfer ){
+      asset zero_asset( 0, core_symbol() );
+      delegatebw( from, receiver, zero_asset, stake_cpu_quantity, transfer );
+   }
+
    void system_contract::undelegatebw( name from, name receiver,
                                        asset unstake_net_quantity,
                                        asset unstake_cpu_quantity ) {
@@ -248,6 +253,11 @@ namespace eosiosystem {
       check( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
 
       changebw( from, receiver, -unstake_cpu_quantity, false);
+   }
+
+   void system_contract::undlgtcpu( name from, name receiver, asset unstake_cpu_quantity ){
+      asset zero_asset( 0, core_symbol() );
+      undelegatebw( from, receiver, zero_asset, unstake_cpu_quantity );
    }
 
    void system_contract::refund( const name owner ) {

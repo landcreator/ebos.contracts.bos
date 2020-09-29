@@ -14,17 +14,18 @@ namespace eosiosystem {
    :native(s,code,ds),
     _voters(_self, _self.value),
     _producers(_self, _self.value),
-    _producers2(_self, _self.value),
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),
-    _guarantee(_self, _self.value),
-    _upgrade(_self, _self.value)
+    _upgrade(_self, _self.value),
+    _vwglobal(_self, _self.value),
+    _acntype(_self, _self.value)
    {
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
       _ustate = _upgrade.exists() ? _upgrade.get() : upgrade_state{};
+      _vwstate = _vwglobal.exists() ? _vwglobal.get() : vote_weight_state{};
    }
 
    eosio_global_state system_contract::get_default_parameters() {
@@ -47,13 +48,7 @@ namespace eosiosystem {
       _global2.set( _gstate2, _self );
       _global3.set( _gstate3, _self );
       _upgrade.set( _ustate, _self );
-   }
-
-   void system_contract::setram( uint64_t max_ram_size ) {
-      require_auth( _self );
-      check( _gstate.max_ram_size < max_ram_size, "ram may only be increased" );
-      check( max_ram_size < 1024ll*1024*1024*1024*1024, "ram size is unrealistic" );
-      _gstate.max_ram_size = max_ram_size;
+      _vwglobal.set( _vwstate, _self );
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
@@ -63,17 +58,14 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
 
-   void system_contract::setguaminres(uint32_t cpu)
+   void system_contract::setgrtdcpu(uint32_t cpu)
    {
       require_auth(_self);
-      const static uint32_t max_microsec = 10 * 1000 * 1000; // 10 seconds
+      const static uint32_t max_microsec = 60 * 1000 * 1000; // 60 seconds
 
-      eosio_assert( cpu <= max_microsec , "the value of cpu should not more then 10 seconds");
-      eosio_guaranteed_min_res _gmr = _guarantee.exists() ? _guarantee.get() : eosio_guaranteed_min_res{};
-      eosio_assert( _gmr.cpu < cpu, "can not reduce cpu guarantee");
-
-      _gmr.cpu = cpu;
-      _guarantee.set(_gmr, _self);
+      eosio_assert( cpu <= max_microsec , "the value of cpu should not more then 60 seconds");
+      eosio_assert( cpu > _gstate2.guaranteed_cpu, "can not reduce cpu guarantee");
+      _gstate2.guaranteed_cpu = cpu;
 
       set_guaranteed_minimum_resources(0, cpu, 0);
    }
@@ -102,14 +94,6 @@ namespace eosiosystem {
       });
    }
 
-   void system_contract::updtrevision( uint8_t revision ) {
-      require_auth( _self );
-      check( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
-      check( revision == _gstate2.revision + 1, "can only increment revision by one" );
-      check( revision <= 1, // set upper bound to greatest revision supported in the code
-                    "specified revision is not yet supported by the code" );
-      _gstate2.revision = revision;
-   }
 
    /**
     *  Called after a new account is created. This code enforces resource-limits rules
@@ -154,7 +138,6 @@ namespace eosiosystem {
       eosio::multi_index< "abihash"_n, abi_hash >  table(_self, _self.value);
       auto itr = table.find( acnt.value );
       if( itr == table.end() ) {
-
          table.emplace( acnt, [&]( auto& row ) {
             row.owner= acnt;
             sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
@@ -167,12 +150,13 @@ namespace eosiosystem {
    }
 
    void native::setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ){
-
+      check( has_auth("eosio"_n) ||
+             has_auth( system_contract::admin_account ),
+             "you must have eosio or dyadmin account authority to call setcode" );
    }
 
-   void system_contract::init( unsigned_int version, symbol core ) {
+   void system_contract::init( symbol core ) {
       require_auth( _self );
-      check( version.value == 0, "unsupported version for init action" );
 
       auto system_token_supply = eosio::token::get_supply(token_account, core.code() );
       check( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
@@ -188,6 +172,48 @@ namespace eosiosystem {
    void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ){
       check( bytes == 0, "buyrambytes action's bytes must be zero ");
    }
+
+   void system_contract::setvweight( uint32_t company_weight, uint32_t government_weight ){
+      require_auth( _self );
+      check( 100 <= company_weight && company_weight <= 1000, "company_weight range is [100,1000]" );
+      check( 100 <= government_weight && government_weight <= 1000, "company_weight range is [100,1000]" );
+      _vwstate.company_weight = company_weight;
+      _vwstate.government_weight = government_weight;
+   }
+
+   void system_contract::setacntfee( asset account_creation_fee ){
+      require_auth( _self );
+      check( core_symbol() == account_creation_fee.symbol, "token symbol not match" );
+      check( 0 < account_creation_fee.amount && account_creation_fee.amount <= 10 * std::pow(10,core_symbol().precision()), (string("fee range is {0, 10.0 ") + core_symbol().code().to_string() + "]" ).c_str() );
+      _gstate2.account_creation_fee = account_creation_fee;
+   }
+
+   void system_contract::setacntype( name acnt, name type ){
+      require_auth( admin_account );
+
+      check( type == "company"_n || type == "government"_n || type == "none"_n, "type value must be one of [company, government, none]");
+
+      auto itr = _acntype.find( acnt.value );
+      if( itr == _acntype.end() ) {
+         check( type == "company"_n || type == "government"_n, "type value must be one of [company, government]");
+         _acntype.emplace( _self, [&]( auto& r ) {
+            r.account = acnt;
+            r.type = type ;
+         });
+         return;
+      }
+
+      check( type != itr->type , "account type no change");
+
+      if ( type == "none"_n ){
+         _acntype.erase( itr );
+         return;
+      }
+
+      _acntype.modify( itr, same_payer, [&]( auto& r ) {
+         r.type = type ;
+      });
+   }
 } /// eosio.system
 
 
@@ -195,9 +221,9 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror) // (setabi)
      // eosio.system.cpp
-     (init)(setram)(setparams)(setguaminres)(setpriv)(setalimits)(rmvproducer)(updtrevision)(buyram)(buyrambytes)
+     (init)(setparams)(setgrtdcpu)(setpriv)(setalimits)(rmvproducer)(buyram)(buyrambytes)(setvweight)(setacntfee)(setacntype)
      // delegate_bandwidth.cpp
-     (delegatebw)(undelegatebw)(refund)
+     (delegatebw)(dlgtcpu)(undelegatebw)(undlgtcpu)(refund)
      // voting.cpp
      (regproducer)(unregprod)(voteproducer)(regproxy)
      // producer_pay.cpp

@@ -29,6 +29,7 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
    using eosio::check;
+   using std::string;
 
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
@@ -49,7 +50,26 @@ namespace eosiosystem {
          return ( flags & ~static_cast<F>(field) );
    }
 
-   /**
+   struct [[eosio::table("voteweight"), eosio::contract("eosio.system")]] vote_weight_state {
+      vote_weight_state() {}
+      uint32_t  company_weight = 100;        /// base number is 100
+      uint32_t  government_weight = 100;     /// base number is 100
+
+      EOSLIB_SERIALIZE( vote_weight_state, (company_weight)(government_weight) )
+   };
+   typedef eosio::singleton< "voteweight"_n, vote_weight_state >   vote_weight_singleton;
+
+   struct [[eosio::table("acntype"), eosio::contract("eosio.system")]] ebos_account_type {
+      ebos_account_type() { }
+      name   account;
+      name   type;  /// must be "company" or "government"
+
+      uint64_t primary_key()const { return account.value; }
+      EOSLIB_SERIALIZE( ebos_account_type, (account)(type) )
+   };
+   typedef eosio::multi_index< "acntype"_n, ebos_account_type >  account_type_table;
+
+    /**
     * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
     * - There are three types of accounts, ordinary user accounts, corporate accounts, and government accounts.
     * - Users can stake tokens for CPU, and then corporate and government accounts could vote for producers or delegate their vote to a proxy.
@@ -88,11 +108,11 @@ namespace eosiosystem {
    struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
       eosio_global_state2(){}
 
-      symbol            core_symbol;
-      double            total_producer_votepay_share = 0;
-      uint8_t           revision = 0; ///< used to track version updates in the future.
+      symbol   core_symbol;
+      asset    account_creation_fee;
+      uint32_t guaranteed_cpu = 2 * 1000 * 1000; // 3 seconds
 
-      EOSLIB_SERIALIZE( eosio_global_state2, (core_symbol)(total_producer_votepay_share)(revision) )
+      EOSLIB_SERIALIZE( eosio_global_state2, (core_symbol)(account_creation_fee)(guaranteed_cpu) )
    };
 
    struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
@@ -121,17 +141,6 @@ namespace eosiosystem {
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
                         (unpaid_blocks)(last_claim_time)(location) )
-   };
-
-   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
-      name            owner;
-      double          votepay_share = 0;
-      time_point      last_votepay_share_update;
-
-      uint64_t primary_key()const { return owner.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] voter_info {
@@ -171,16 +180,6 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(flags1)(reserved2)(reserved3) )
    };
 
-   struct [[eosio::table("guaranminres"), eosio::contract("eosio.system")]] eosio_guaranteed_min_res{
-      eosio_guaranteed_min_res(){}
-
-      uint32_t ram = 0;  ///  guaranteed minimum ram  in kb for every account.
-      uint32_t cpu = 0;  ///  guaranteed minimum cpu  in bos for every account.
-      uint32_t net = 0;  ///  guaranteed minimum net  in bos for every account.
-
-      EOSLIB_SERIALIZE( eosio_guaranteed_min_res, (ram)(cpu)(net) )
-   };
-
    struct [[eosio::table("upgrade"), eosio::contract("eosio.system")]] upgrade_state  {
       uint32_t     target_block_num;
 
@@ -193,10 +192,8 @@ namespace eosiosystem {
    typedef eosio::multi_index< "producers"_n, producer_info,
                                indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
                                > producers_table;
-   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
 
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
-   typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;
    typedef eosio::singleton< "upgrade"_n, upgrade_state > upgrade_singleton;
 
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -205,26 +202,24 @@ namespace eosiosystem {
       private:
          voters_table            _voters;
          producers_table         _producers;
-         producers_table2        _producers2;
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
-         guaranteed_min_res_singleton  _guarantee;
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
          upgrade_singleton       _upgrade;
          upgrade_state           _ustate;
+         vote_weight_singleton   _vwglobal;
+         vote_weight_state       _vwstate;
+         account_type_table      _acntype;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
          static constexpr eosio::name token_account{"eosio.token"_n};
          static constexpr eosio::name stake_account{"eosio.stake"_n};
-         static constexpr eosio::name bpay_account{"eosio.bpay"_n};
-         static constexpr eosio::name vpay_account{"eosio.vpay"_n};
-         static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
-         static constexpr eosio::name null_account{"eosio.null"_n};
+         static constexpr eosio::name admin_account{"dyadmin"_n};
 
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
@@ -236,7 +231,7 @@ namespace eosiosystem {
          }
 
          [[eosio::action]]
-         void init( unsigned_int version, symbol core );
+         void init( symbol core );
 
          [[eosio::action]]
          void onblock( ignore<block_header> header );
@@ -250,11 +245,14 @@ namespace eosiosystem {
           *  If transfer == true, then 'receiver' can unstake to their account
           *  Else 'from' can unstake at any time.
           */
-         [[eosio::action]]
+         [[eosio::action]] /// exist and unchanged for compatibility of eosio community related software apis
          void delegatebw( name from, name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
-         /**
+         [[eosio::action]]
+         void dlgtcpu( name from, name receiver, asset stake_cpu_quantity, bool transfer );
+
+      /**
           *  Decreases the total tokens delegated by from to receiver and/or
           *  frees the memory associated with the delegation if there is nothing
           *  left to delegate.
@@ -270,9 +268,11 @@ namespace eosiosystem {
           *  The 'from' account loses voting power as a result of this call and
           *  all producer tallies are updated.
           */
-         [[eosio::action]]
+         [[eosio::action]] /// exist and unchanged for compatibility of eosio community related software apis
          void undelegatebw( name from, name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
+         [[eosio::action]]
+         void undlgtcpu( name from, name receiver, asset unstake_cpu_quantity );
 
          /**
           *  This action is called after the delegation-period to claim all pending
@@ -282,14 +282,11 @@ namespace eosiosystem {
          void refund( name owner );
 
          /// functions defined in voting.cpp
-         [[eosio::action]]
+         [[eosio::action]] /// unchanged for compatibility of eosio community related software apis
          void regproducer( const name producer, const public_key& producer_key, const std::string& url, uint16_t location );
 
          [[eosio::action]]
          void unregprod( const name producer );
-
-         [[eosio::action]]
-         void setram( uint64_t max_ram_size );
 
          [[eosio::action]]
          void voteproducer( const name voter, const name proxy, const std::vector<name>& producers );
@@ -301,7 +298,7 @@ namespace eosiosystem {
          void setparams( const eosio::blockchain_parameters& params );
 
          [[eosio::action]]
-         void setguaminres( uint32_t cpu );
+         void setgrtdcpu( uint32_t cpu );
 
          /// functions defined in producer_pay.cpp
          [[eosio::action]]
@@ -313,9 +310,6 @@ namespace eosiosystem {
          [[eosio::action]]
          void rmvproducer( name producer );
 
-         [[eosio::action]]
-         void updtrevision( uint8_t revision );
-
          struct upgrade_proposal {
              uint32_t    target_block_num;
          };
@@ -324,30 +318,22 @@ namespace eosiosystem {
          [[eosio::action]]
          void setupgrade( const upgrade_proposal& up);
 
-         [[eosio::action]]
+         [[eosio::action]] /// exist and unchanged for compatibility of eosio community related software apis
          void buyram( name payer, name receiver, asset quant );
 
-         [[eosio::action]]
+         [[eosio::action]] /// exist and unchanged for compatibility of eosio community related software apis
          void buyrambytes( name payer, name receiver, uint32_t bytes );
 
-         using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
-         using delegatebw_action = eosio::action_wrapper<"delegatebw"_n, &system_contract::delegatebw>;
-         using undelegatebw_action = eosio::action_wrapper<"undelegatebw"_n, &system_contract::undelegatebw>;
-         using refund_action = eosio::action_wrapper<"refund"_n, &system_contract::refund>;
-         using regproducer_action = eosio::action_wrapper<"regproducer"_n, &system_contract::regproducer>;
-         using unregprod_action = eosio::action_wrapper<"unregprod"_n, &system_contract::unregprod>;
-         using setram_action = eosio::action_wrapper<"setram"_n, &system_contract::setram>;
-         using voteproducer_action = eosio::action_wrapper<"voteproducer"_n, &system_contract::voteproducer>;
-         using regproxy_action = eosio::action_wrapper<"regproxy"_n, &system_contract::regproxy>;
-         using claimrewards_action = eosio::action_wrapper<"claimrewards"_n, &system_contract::claimrewards>;
-         using rmvproducer_action = eosio::action_wrapper<"rmvproducer"_n, &system_contract::rmvproducer>;
-         using updtrevision_action = eosio::action_wrapper<"updtrevision"_n, &system_contract::updtrevision>;
-         using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
-         using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
-         using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
+         [[eosio::action]]
+         void setvweight( uint32_t company_weight, uint32_t government_weight );
 
-      private:
+         [[eosio::action]]
+         void setacntfee( asset account_creation_fee );
 
+         [[eosio::action]]
+         void setacntype( name account, name type );
+
+   private:
          //defined in eosio.system.cpp
          static eosio_global_state  get_default_parameters();
          static time_point current_time_point();
@@ -357,18 +343,10 @@ namespace eosiosystem {
          void changebw( name from, name receiver, asset stake_cpu_quantity, bool transfer );
          void update_voting_power( const name& voter, const asset& total_update );
 
-         //defined in voting.hpp
+         //defined in voting.cpp
          void update_elected_producers( block_timestamp timestamp );
          void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
-
-         // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
-
-         double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               time_point ct,
-                                               double shares_rate, bool reset_to_zero = false );
-         double update_total_votepay_share( time_point ct,
-                                            double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
    };
 
 } /// eosiosystem
