@@ -104,7 +104,7 @@ namespace eosiosystem {
     *  who can create accounts with the creator's name as a suffix.
     *
     */
-   void native::newaccount( name              creator,
+   void system_contract::newaccount( name              creator,
                             name              newact,
                             ignore<authority> owner,
                             ignore<authority> active ) {
@@ -122,6 +122,10 @@ namespace eosiosystem {
             check( suffix != newact, "short root name must created by eosio authority" );
             check( creator == suffix, "only suffix may create this account" );
          }
+
+         check( _gstate2.account_creation_fee.amount > 0, "account_creation_fee must set first" );
+         transfer_action_type action_data{ creator, saving_account, _gstate2.account_creation_fee, "new account creation fee" };
+         action( permission_level{ creator, "active"_n }, token_account, "transfer"_n, action_data ).send();
       }
 
       user_resources_table userres( _self, newact.value);

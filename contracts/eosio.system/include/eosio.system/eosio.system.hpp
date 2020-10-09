@@ -31,6 +31,15 @@ namespace eosiosystem {
    using eosio::check;
    using std::string;
 
+   struct transfer_action_type {
+      name    from;
+      name    to;
+      asset   quantity;
+      string  memo;
+
+      EOSLIB_SERIALIZE( transfer_action_type, (from)(to)(quantity)(memo) )
+   };
+
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
    -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
@@ -332,6 +341,13 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setacntype( name account, name type );
+
+         [[eosio::action]]
+         void newaccount( name             creator,
+                          name             newact,
+                          ignore<authority> owner,
+                          ignore<authority> active);
+
 
    private:
          //defined in eosio.system.cpp
