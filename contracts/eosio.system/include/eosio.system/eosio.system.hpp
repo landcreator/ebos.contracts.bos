@@ -78,6 +78,15 @@ namespace eosiosystem {
    };
    typedef eosio::multi_index< "acntype"_n, ebos_account_type >  account_type_table;
 
+   struct [[eosio::table("cwl"), eosio::contract("eosio.system")]] ebos_contract_white_list {
+      ebos_contract_white_list() { }
+      name   account;
+
+      uint64_t primary_key()const { return account.value; }
+      EOSLIB_SERIALIZE( ebos_contract_white_list, (account) )
+   };
+   typedef eosio::multi_index< "cwl"_n, ebos_contract_white_list >  cwl_table;
+
     /**
     * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
     * - There are three types of accounts, ordinary user accounts, corporate accounts, and government accounts.
@@ -222,6 +231,7 @@ namespace eosiosystem {
          vote_weight_singleton   _vwglobal;
          vote_weight_state       _vwstate;
          account_type_table      _acntype;
+         cwl_table               _cwl;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -338,6 +348,13 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setacntfee( asset account_creation_fee );
+
+         [[eosio::action]]
+         void awlset( string action, name account );
+
+[[eosio::action]]
+    void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code );
+
 
          [[eosio::action]]
          void setacntype( name account, name type );

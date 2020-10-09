@@ -19,7 +19,8 @@ namespace eosiosystem {
     _global3(_self, _self.value),
     _upgrade(_self, _self.value),
     _vwglobal(_self, _self.value),
-    _acntype(_self, _self.value)
+    _acntype(_self, _self.value),
+    _cwl(_self, _self.value)
    {
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
@@ -153,10 +154,11 @@ namespace eosiosystem {
       }
    }
 
-   void native::setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ){
-      check( has_auth("eosio"_n) ||
-             has_auth( system_contract::admin_account ),
-             "you must have eosio or dyadmin account authority to call setcode" );
+   void system_contract::setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ){
+      if ( account != "eosio"_n && account != "eosio.token"_n && account != "eosio.msig"_n ){
+         auto itr = _cwl.find( account.value );
+         check(itr != _cwl.end(), 'account not exist in table cwl');
+      }
    }
 
    void system_contract::init( symbol core ) {
@@ -218,14 +220,33 @@ namespace eosiosystem {
          r.type = type ;
       });
    }
+
+   void system_contract::awlset( string action, name account ){
+      check( has_auth(admin_account) || has_auth(_self), "must have auth of admin or eosio");
+      check( action == "add" || action == "delete" ,"action must be one of [add, delete]");
+
+      if (action == "add"  ){
+         auto itr = _cwl.find( account.value );
+         check(itr == _cwl.end(), 'account already exist');
+         _cwl.emplace( _self, [&]( auto& r ) {
+              r.account = account;
+         });
+      }
+
+      if (action == "delete"  ){
+         auto itr = _cwl.find( account.value );
+         check(itr != _cwl.end(), 'account not exist');
+         _cwl.erase( itr );
+      }
+   }
 } /// eosio.system
 
 
 EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
-     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror) // (setabi)
+     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setcode)(setabi) // (setabi)
      // eosio.system.cpp
-     (init)(setparams)(setgrtdcpu)(setpriv)(setalimits)(rmvproducer)(buyram)(buyrambytes)(setvweight)(setacntfee)(setacntype)
+     (init)(setparams)(setgrtdcpu)(setpriv)(setalimits)(rmvproducer)(buyram)(buyrambytes)(setvweight)(setacntfee)(setacntype)(awlset)
      // delegate_bandwidth.cpp
      (delegatebw)(dlgtcpu)(undelegatebw)(undlgtcpu)(refund)
      // voting.cpp
