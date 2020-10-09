@@ -198,26 +198,13 @@ namespace eosiosystem {
       require_auth( admin_account );
       check( is_account( acnt ), "account not exist");
 
-      check( type == "company"_n || type == "government"_n || type == "none"_n, "type value must be one of [company, government, none]");
+      check( type == "company"_n || type == "government"_n , "type value must be one of [company, government]");
 
       auto itr = _acntype.find( acnt.value );
-      if( itr == _acntype.end() ) {
-         check( type == "company"_n || type == "government"_n, "type value must be one of [company, government]");
-         _acntype.emplace( _self, [&]( auto& r ) {
-            r.account = acnt;
-            r.type = type ;
-         });
-         return;
-      }
+      check(itr == _acntype.end(), 'account already set');
 
-      check( type != itr->type , "account type no change");
-
-      if ( type == "none"_n ){
-         _acntype.erase( itr );
-         return;
-      }
-
-      _acntype.modify( itr, same_payer, [&]( auto& r ) {
+      _acntype.emplace( _self, [&]( auto& r ) {
+         r.account = acnt;
          r.type = type ;
       });
    }
@@ -251,7 +238,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // delegate_bandwidth.cpp
      (delegatebw)(dlgtcpu)(undelegatebw)(undlgtcpu)(refund)
      // voting.cpp
-     (regproducer)(unregprod)(voteproducer)(regproxy)
+     (regproducer)(unregprod)(voteproducer)
      // producer_pay.cpp
      (onblock)(claimrewards)
      //upgrade.cpp

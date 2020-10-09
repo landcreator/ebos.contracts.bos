@@ -119,11 +119,11 @@ namespace eosiosystem {
             tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
                   tot.owner      = receiver;
                   tot.cpu_weight = stake_cpu_delta;
-               });
+            });
          } else {
             totals_tbl.modify( tot_itr, from == receiver ? from : same_payer, [&]( auto& tot ) {
                   tot.cpu_weight += stake_cpu_delta;
-               });
+            });
          }
 
          check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
@@ -183,12 +183,9 @@ namespace eosiosystem {
 
          if ( need_deferred_trx ) {
             eosio::transaction out;
-            out.actions.emplace_back( permission_level{from, active_permission},
-                                      _self, "refund"_n,
-                                      from
-            );
+            out.actions.emplace_back( permission_level{from, active_permission},  _self, "refund"_n,  from );
             out.delay_sec = refund_delay_sec;
-            cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+            cancel_deferred( from.value );
             out.send( from.value, from, true );
          } else {
             cancel_deferred( from.value );
@@ -222,8 +219,8 @@ namespace eosiosystem {
 
       check( 0 <= voter_itr->staked, "stake for voting cannot be negative" );
 
-      if( voter_itr->producers.size() || voter_itr->proxy ) {
-         update_votes( voter, voter_itr->proxy, voter_itr->producers, false );
+      if( voter_itr->producers.size() ) {
+         update_producers_votes( voter, voter_itr->producers, false );
       }
    }
 
