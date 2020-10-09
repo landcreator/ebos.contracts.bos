@@ -196,6 +196,7 @@ namespace eosiosystem {
 
    void system_contract::setacntype( name acnt, name type ){
       require_auth( admin_account );
+      check( is_account( acnt ), "account not exist");
 
       check( type == "company"_n || type == "government"_n || type == "none"_n, "type value must be one of [company, government, none]");
 

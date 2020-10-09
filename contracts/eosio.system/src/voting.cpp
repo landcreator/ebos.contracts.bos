@@ -87,15 +87,6 @@ namespace eosiosystem {
          return;
       }
 
-      /// sort by producer location
-      struct {
-          bool operator()(std::pair<eosio::producer_key,uint16_t> a, std::pair<eosio::producer_key,uint16_t> b) const
-          {
-             return a.second ==b.second?a.first<b.first:a.second < b.second;
-          }
-      } cmp;
-      std::sort( top_producers.begin(), top_producers.end(), cmp);
-
       std::vector<eosio::producer_key> producers;
 
       producers.reserve(top_producers.size());
