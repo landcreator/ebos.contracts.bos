@@ -198,10 +198,10 @@ namespace eosiosystem {
       require_auth( admin_account );
       check( is_account( acnt ), "account not exist");
 
-      check( type == "company"_n || type == "government"_n , "type value must be one of [company, government]");
-
       auto itr = _acntype.find( acnt.value );
       check(itr == _acntype.end(), 'account already set');
+
+      check( type == name_company || type == name_government , "type value must be one of [company, government]");
 
       _acntype.emplace( _self, [&]( auto& r ) {
          r.account = acnt;

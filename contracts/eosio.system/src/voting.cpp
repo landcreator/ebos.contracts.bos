@@ -92,7 +92,7 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::voteproducer( const name voter_name, const std::vector<name>& producers ) {
+   void system_contract::voteproducer( const name voter_name, const name , const std::vector<name>& producers ) {
       require_auth( voter_name );
       check( producers.size() <= 30, "attempt to vote for too many producers" );
       for( size_t i = 1; i < producers.size(); ++i ) {
@@ -103,55 +103,60 @@ namespace eosiosystem {
       check( voter_itr != _voters.end(), "user must stake before they can vote" );
 
       auto itr = _acntype.find( voter_name.value );
-      check( itr != _acntype.end() && , 'user must registered as company or government');
+      check( itr != _acntype.end(), 'user must registered as company or government');
 
       auto old_producers = voter_itr->producers;
       auto old_staked    = voter_itr->staked;
       auto new_producers = producers;
       auto new_staked    = voter_itr->staked;
+      auto a_type        = itr->type;
 
       _voters.modify( voter_itr, same_payer, [&]( auto& v ) {
          v.producers = new_producers;
       });
 
-      update_producers_votes( old_producers, old_staked, new_producers, new_staked, true );
+      update_producers_votes( a_type, true, old_producers, old_staked, new_producers, new_staked );
    }
 
-   void system_contract::update_producers_votes( const std::vector<name>& old_producers, int64_t old_staked,
-                                                 const std::vector<name>& new_producers, int64_t new_staked, bool voting ) {
-
-      for( const auto& p : old_producers  ) {
-         auto pitr = _producers.find( p.value );
-         check( !voting || pitr->active(), "producer is not currently registered" );
-         if ( itr->type == "company" ){
+   void system_contract::update_producers_votes( name a_type, bool voting,
+                                                 const std::vector<name>& old_producers, int64_t old_staked,
+                                                 const std::vector<name>& new_producers, int64_t new_staked ) {
+      if( old_staked != 0){
+          for( const auto& p : old_producers  ) {
+             auto pitr = _producers.find( p.value );
+             check( !voting || pitr->active(), "producer is not currently registered" );
+             if ( a_type == name_company ){
+                _producers.modify( pitr, same_payer, [&]( auto& p ) {
+                   p.company_votes -= old_staked;
+                });
+             } else {
+               _producers.modify( pitr, same_payer, [&]( auto& p ) {
+                   p.government_votes -= old_staked;
+               });
+             }
             _producers.modify( pitr, same_payer, [&]( auto& p ) {
-               p.company_votes -= old_staked;
+               p.total_vote_weight = p.government_votes * _vwstate.government_weight + p.company_votes * _vwstate.company_weight;
             });
-         } else {
-           _producers.modify( pitr, same_payer, [&]( auto& p ) {
-               p.government_votes -= old_staked;
-           });
-         }
-        _producers.modify( pitr, same_payer, [&]( auto& p ) {
-           p.total_vote_weight = p.government_votes * _vwstate.government_weight + p.company_votes * _vwstate.company_weight;
-        });
+          }
       }
 
-      for( const auto& p : new_producers  ) {
-           auto pitr = _producers.find( p.value );
-           check( !voting || pitr->active(), "producer is not currently registered" );
-           if ( itr->type == "company" ){
-              _producers.modify( pitr, same_payer, [&]( auto& p ) {
-                 p.company_votes += new_staked;
-              });
-           } else {
-             _producers.modify( pitr, same_payer, [&]( auto& p ) {
-                 p.government_votes += new_staked;
-             });
-           }
-           _producers.modify( pitr, same_payer, [&]( auto& p ) {
-              p.total_vote_weight = p.government_votes * _vwstate.government_weight + p.company_votes * _vwstate.company_weight;
-           });
+      if ( new_staked != 0 ){
+          for( const auto& p : new_producers  ) {
+               auto pitr = _producers.find( p.value );
+               check( !voting || pitr->active(), "producer is not currently registered" );
+               if ( a_type == name_company ){
+                  _producers.modify( pitr, same_payer, [&]( auto& p ) {
+                     p.company_votes += new_staked;
+                  });
+               } else {
+                 _producers.modify( pitr, same_payer, [&]( auto& p ) {
+                     p.government_votes += new_staked;
+                 });
+               }
+               _producers.modify( pitr, same_payer, [&]( auto& p ) {
+                  p.total_vote_weight = p.government_votes * _vwstate.government_weight + p.company_votes * _vwstate.company_weight;
+               });
+          }
       }
    }
 } /// namespace eosiosystem

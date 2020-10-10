@@ -31,6 +31,9 @@ namespace eosiosystem {
    using eosio::check;
    using std::string;
 
+   const static name name_company = "company"_n;
+   const static name name_government = "government"_n;
+
    struct transfer_action_type {
       name    from;
       name    to;
@@ -289,9 +292,6 @@ namespace eosiosystem {
          void voteproducer( const name voter, const name proxy, const std::vector<name>& producers );
 
          [[eosio::action]]
-         void regproxy( const name proxy, bool isproxy );
-
-         [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
 
          [[eosio::action]]
@@ -356,7 +356,8 @@ namespace eosiosystem {
 
          //defined in voting.cpp
          void update_elected_producers( block_timestamp timestamp );
-         void update_producers_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
+         void update_producers_votes( name type, bool voting, const std::vector<name>& old_producers, int64_t old_staked,
+                                      const std::vector<name>& new_producers, int64_t new_staked );
    };
 
 } /// eosiosystem

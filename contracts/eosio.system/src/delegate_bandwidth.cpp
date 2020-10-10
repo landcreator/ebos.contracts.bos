@@ -98,11 +98,11 @@ namespace eosiosystem {
                   dbo.from          = from;
                   dbo.to            = receiver;
                   dbo.cpu_weight    = stake_cpu_delta;
-               });
+            });
          } else {
             del_tbl.modify( itr, same_payer, [&]( auto& dbo ){
                   dbo.cpu_weight    += stake_cpu_delta;
-               });
+            });
          }
 
          check( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth" );
@@ -154,9 +154,10 @@ namespace eosiosystem {
                   }
 
                   r.cpu_amount -= cpu_balance;
+
                   if ( r.cpu_amount.amount < 0 ){
-                     cpu_balance = -r.cpu_amount;
                      r.cpu_amount.amount = 0;
+                     cpu_balance = -r.cpu_amount;
                   } else {
                      cpu_balance.amount = 0;
                   }
@@ -205,22 +206,32 @@ namespace eosiosystem {
 
    void system_contract::update_voting_power( const name& voter, const asset& total_update )
    {
+      int64_t old_staked = 0;
+      int64_t new_staked = 0;
+
       auto voter_itr = _voters.find( voter.value );
       if( voter_itr == _voters.end() ) {
          voter_itr = _voters.emplace( voter, [&]( auto& v ) {
             v.owner  = voter;
             v.staked = total_update.amount;
          });
+         old_staked = 0;
+         new_staked = voter_itr->staked;
       } else {
+         old_staked = voter_itr->staked;
          _voters.modify( voter_itr, same_payer, [&]( auto& v ) {
             v.staked += total_update.amount;
          });
+         new_staked = voter_itr->staked;
       }
 
       check( 0 <= voter_itr->staked, "stake for voting cannot be negative" );
 
       if( voter_itr->producers.size() ) {
-         update_producers_votes( voter, voter_itr->producers, false );
+          auto itr = _acntype.find( voter.value );
+          if( itr != _acntype.end() ){
+             update_producers_votes( itr->type , false, voter_itr->producers, old_staked, voter_itr->producers, new_staked);
+          }
       }
    }
 
