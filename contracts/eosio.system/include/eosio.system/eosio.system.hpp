@@ -146,6 +146,7 @@ namespace eosiosystem {
       double                total_vote_weight = 0;
       int64_t               company_votes = 0;
       int64_t               government_votes = 0;
+      int64_t               normal_votes = 0;
 
       eosio::public_key     producer_key; /// a packed public key object
       bool                  is_active = true;
@@ -160,7 +161,7 @@ namespace eosiosystem {
       void     deactivate()       { producer_key = public_key(); is_active = false; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info, (owner)(total_vote_weight)(company_votes)(government_votes)(producer_key)(is_active)(url)
+      EOSLIB_SERIALIZE( producer_info, (owner)(total_vote_weight)(company_votes)(government_votes)(normal_votes)(producer_key)(is_active)(url)
                         (unpaid_blocks)(last_claim_time)(location) )
    };
 

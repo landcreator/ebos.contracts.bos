@@ -23,14 +23,6 @@ namespace eosiosystem {
    using eosio::singleton;
    using eosio::transaction;
 
-   /**
-    *  This method will create a producer_config and producer_info object for 'producer'
-    *
-    *  @pre producer is not already registered
-    *  @pre producer to register is an account
-    *  @pre authority of producer to register
-    *
-    */
    void system_contract::regproducer( const name producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
       check( url.size() < 512, "url too long" );
       check( producer_key != eosio::public_key(), "public key should not be the default value" );
@@ -76,11 +68,11 @@ namespace eosiosystem {
 
       auto idx = _producers.get_index<"prototalvote"_n>();
 
-      std::vector< std::pair<eosio::producer_key,uint16_t> > top_producers;
+      std::vector< eosio::producer_key > top_producers;
       top_producers.reserve(21);
 
       for ( auto it = idx.cbegin(); it != idx.cend() && top_producers.size() < 21 && 0 < it->total_vote_weight && it->active(); ++it ) {
-         top_producers.emplace_back( std::pair<eosio::producer_key,uint16_t>({{it->owner, it->producer_key}, it->location}) );
+         top_producers.emplace_back( eosio::producer_key{it->owner, it->producer_key} );
       }
 
       if ( top_producers.empty() || top_producers.size() < _gstate.last_producer_schedule_size ) {
@@ -91,7 +83,7 @@ namespace eosiosystem {
 
       producers.reserve(top_producers.size());
       for( const auto& item : top_producers )
-         producers.push_back(item.first);
+         producers.push_back(item);
 
       auto packed_schedule = pack(producers);
 
@@ -100,23 +92,35 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::voteproducer( const name voter_name, const name proxy, const std::vector<name>& producers ) {
+   void system_contract::voteproducer( const name voter_name, const std::vector<name>& producers ) {
       require_auth( voter_name );
       check( producers.size() <= 30, "attempt to vote for too many producers" );
       for( size_t i = 1; i < producers.size(); ++i ) {
          check( producers[i-1] < producers[i], "producer votes must be unique and sorted" );
       }
-      update_producers_votes( voter_name, proxy, producers, true );
-   }
 
-   void system_contract::update_producers_votes( const name voter_name, const std::vector<name>& new_producers, int64_t old_staked, int64_t new_staked , bool voting) {
       auto voter_itr = _voters.find( voter_name.value );
       check( voter_itr != _voters.end(), "user must stake before they can vote" );
 
       auto itr = _acntype.find( voter_name.value );
       check( itr != _acntype.end() && , 'user must registered as company or government');
 
-      for( const auto& p : voter_itr->producers  ) {
+      auto old_producers = voter_itr->producers;
+      auto old_staked    = voter_itr->staked;
+      auto new_producers = producers;
+      auto new_staked    = voter_itr->staked;
+
+      _voters.modify( voter_itr, same_payer, [&]( auto& v ) {
+         v.producers = new_producers;
+      });
+
+      update_producers_votes( old_producers, old_staked, new_producers, new_staked, true );
+   }
+
+   void system_contract::update_producers_votes( const std::vector<name>& old_producers, int64_t old_staked,
+                                                 const std::vector<name>& new_producers, int64_t new_staked, bool voting ) {
+
+      for( const auto& p : old_producers  ) {
          auto pitr = _producers.find( p.value );
          check( !voting || pitr->active(), "producer is not currently registered" );
          if ( itr->type == "company" ){
@@ -128,6 +132,9 @@ namespace eosiosystem {
                p.government_votes -= old_staked;
            });
          }
+        _producers.modify( pitr, same_payer, [&]( auto& p ) {
+           p.total_vote_weight = p.government_votes * _vwstate.government_weight + p.company_votes * _vwstate.company_weight;
+        });
       }
 
       for( const auto& p : new_producers  ) {
@@ -142,11 +149,9 @@ namespace eosiosystem {
                  p.government_votes += new_staked;
              });
            }
+           _producers.modify( pitr, same_payer, [&]( auto& p ) {
+              p.total_vote_weight = p.government_votes * _vwstate.government_weight + p.company_votes * _vwstate.company_weight;
+           });
       }
-
-      _producers.modify( pitr, same_payer, [&]( auto& p ) {
-          p.total_vote_weight = p.government_votes * _vwstate.government_weight +
-                                p.company_votes * _vwstate.company_weight;
-      });
    }
 } /// namespace eosiosystem
