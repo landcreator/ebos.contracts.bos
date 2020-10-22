@@ -68,7 +68,7 @@ namespace eosiosystem {
       eosio_assert( cpu > _gstate2.guaranteed_cpu, "can not reduce cpu guarantee");
       _gstate2.guaranteed_cpu = cpu;
 
-      set_guaranteed_minimum_resources(0, cpu, 0);
+      // set_guaranteed_minimum_resources(0, cpu, 0);
    }
 
    void system_contract::setpriv( name account, uint8_t ispriv ) {
