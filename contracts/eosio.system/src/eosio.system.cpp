@@ -155,10 +155,10 @@ namespace eosiosystem {
    }
 
    void system_contract::setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ){
-      if ( account != "eosio"_n && account != "eosio.token"_n && account != "eosio.msig"_n ){
-         auto itr = _cwl.find( account.value );
-         check(itr != _cwl.end(), 'account not exist in table cwl');
-      }
+//      if ( account != "eosio"_n && account != "eosio.token"_n && account != "eosio.msig"_n ){
+//         auto itr = _cwl.find( account.value );
+//         check(itr != _cwl.end(), 'account not exist in table cwl');
+//      }
    }
 
    void system_contract::init( symbol core ) {
@@ -199,7 +199,7 @@ namespace eosiosystem {
       check( is_account( acnt ), "account not exist");
 
       auto itr = _acntype.find( acnt.value );
-      check(itr == _acntype.end(), 'account already set');
+      check(itr == _acntype.end(), "account already set");
 
       check( type == name_company || type == name_government , "type value must be one of [company, government]");
 
@@ -215,7 +215,7 @@ namespace eosiosystem {
 
       if (action == "add"  ){
          auto itr = _cwl.find( account.value );
-         check(itr == _cwl.end(), 'account already exist');
+         check(itr == _cwl.end(), "account already exist");
          _cwl.emplace( _self, [&]( auto& r ) {
               r.account = account;
          });
@@ -223,7 +223,7 @@ namespace eosiosystem {
 
       if (action == "delete"  ){
          auto itr = _cwl.find( account.value );
-         check(itr != _cwl.end(), 'account not exist');
+         check(itr != _cwl.end(), "account not exist");
          _cwl.erase( itr );
       }
    }

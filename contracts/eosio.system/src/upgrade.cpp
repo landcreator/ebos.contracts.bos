@@ -8,7 +8,7 @@ namespace eosiosystem {
         auto params = eosio::upgrade_parameters{};
         params.target_block_num = up.target_block_num;
         (eosio::upgrade_parameters&)(_ustate) = params;
-        // set_upgrade_parameters( params );
+        set_upgrade_parameters( params );
 
         _ustate.target_block_num = up.target_block_num;
     }

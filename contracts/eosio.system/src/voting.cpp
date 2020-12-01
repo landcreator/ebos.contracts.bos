@@ -103,7 +103,7 @@ namespace eosiosystem {
       check( voter_itr != _voters.end(), "user must stake before they can vote" );
 
       auto itr = _acntype.find( voter_name.value );
-      check( itr != _acntype.end(), 'user must registered as company or government');
+      check( itr != _acntype.end(), "user must registered as company or government");
 
       auto old_producers = voter_itr->producers;
       auto old_staked    = voter_itr->staked;

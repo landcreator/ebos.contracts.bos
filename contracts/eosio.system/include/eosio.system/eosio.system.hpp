@@ -330,16 +330,15 @@ namespace eosiosystem {
          [[eosio::action]]
          void awlset( string action, name account );
 
-[[eosio::action]]
-    void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code );
-
+         [[eosio::action]]
+         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code );
 
          [[eosio::action]]
          void setacntype( name account, name type );
 
          [[eosio::action]]
-         void newaccount( name             creator,
-                          name             newact,
+         void newaccount( name              creator,
+                          name              newact,
                           ignore<authority> owner,
                           ignore<authority> active);
 
