@@ -9,4 +9,4 @@ add_subdirectory(eosio.bios)
 add_subdirectory(eosio.msig)
 add_subdirectory(eosio.system)
 add_subdirectory(eosio.token)
-
+add_subdirectory(transorderdebt)
