@@ -63,3 +63,8 @@ The naming convention is codeaccount::actionname followed by a list of paramters
 ## eosio::onblock header
    - This special action is triggered when a block is applied by a given producer, and cannot be generated from
      any other source. It is used increment the number of unpaid blocks by a producer and update producer schedule.
+
+## eosio::setacntype( name account, name type );
+   - account: the account to set
+   - type: must be company or government
+   Notes: you can't set an account to a normal account back.
